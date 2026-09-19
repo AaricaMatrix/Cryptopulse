@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CryptoPulse — Web3 Market Signal Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0B0F14;
+    --panel: #121820;
+    --panel-alt: #0E141B;
+    --line: #223040;
+    --text: #E7ECEF;
+    --text-dim: #8FA0AC;
+    --signal: #E8A33D;
+    --signal-dim: #6b5530;
+    --data: #4FA3D1;
+    --data-dim: #2c4a5c;
+    --good: #6FBF8B;
+    --radius-s: 3px;
+    --radius-m: 6px;
+    --font-sans: 'IBM Plex Sans', -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', monospace;
+  }
+  :root:not([data-theme="light"]) { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: calc(72px + env(safe-area-inset-top, 0px));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+  body {
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overflow-x: hidden;
+  }
+  a { color: inherit; }
+  .mono { font-family: var(--font-mono); }
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .wrap-narrow {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ---------- NAV ---------- */
+  header.nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding-top: env(safe-area-inset-top, 0px);
+    background: rgba(11,15,20,0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 28px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .brand-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--signal);
+    box-shadow: 0 0 10px 2px rgba(232,163,61,0.5);
+  }
+  nav.links {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  nav.links::-webkit-scrollbar { display: none; }
+  nav.links a {
+    font-size: 14px;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 8px 13px;
+    border-radius: var(--radius-s);
+    white-space: nowrap;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  nav.links a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  nav.links a.active { color: var(--signal); background: rgba(232,163,61,0.08); }
+  .nav-cta {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    color: var(--ink);
+    background: var(--text);
+    padding: 8px 14px;
+    border-radius: var(--radius-s);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity 0.15s ease;
+  }
+  .nav-cta:hover { opacity: 0.85; }
+  .nav-toggle {
+    display: none;
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-s);
+    color: var(--text);
+    width: 36px; height: 36px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    position: relative;
+    min-height: 92vh;
+    display: flex;
+    align-items: center;
+    padding-top: 64px;
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+  #hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0.9;
+  }
+  .hero-fade {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(100deg, var(--ink) 0%, var(--ink) 28%, rgba(11,15,20,0.55) 52%, rgba(11,15,20,0.15) 75%);
+    pointer-events: none;
+  }
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px 28px;
+    width: 100%;
+  }
+  .hero-inner { max-width: 600px; }
+  .hero-kicker {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--data);
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hero-kicker::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--good);
+    border-radius: 50%;
+    box-shadow: 0 0 8px 1px var(--good);
+  }
+  h1.hero-title {
+    font-size: clamp(34px, 5vw, 52px);
+    font-weight: 700;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin-bottom: 22px;
+  }
+  .hero-sub {
+    font-size: 17px;
+    color: var(--text-dim);
+    line-height: 1.65;
+    margin-bottom: 34px;
+    max-width: 520px;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 44px;
+  }
+  .btn {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 12px 20px;
+    border-radius: var(--radius-s);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--signal); color: #1a1204; font-weight: 600; }
+  .btn-primary:hover { background: #f0ae4c; }
+  .btn-ghost { border-color: var(--line); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--data); color: var(--data); }
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .hstat-num {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .hstat-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* ---------- SECTIONS GENERAL ---------- */
+  section { padding: 100px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 80px; }
+  section:last-of-type { border-bottom: none; }
+  .sec-label {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--signal);
+    margin-bottom: 14px;
+  }
+  h2.sec-title {
+    font-size: clamp(26px, 3.4vw, 34px);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin-bottom: 18px;
+    max-width: 680px;
+  }
+  .sec-desc {
+    color: var(--text-dim);
+    font-size: 16px;
+    max-width: 620px;
+    line-height: 1.7;
+    margin-bottom: 56px;
+  }
+  .sec-desc + .sec-desc { margin-top: -40px; }
+
+  /* ---------- OVERVIEW ---------- */
+  .split-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .claim-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    padding: 28px;
+  }
+  .claim-panel h3 {
+    font-size: 15px;
+    font-family: var(--font-mono);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .claim-panel.is h3::before { content: ''; width: 8px; height: 8px; background: var(--good); border-radius: 2px; }
+  .claim-panel.isnt h3::before { content: ''; width: 8px; height: 8px; background: var(--text-dim); border-radius: 2px; }
+  .claim-panel ul { list-style: none; }
+  .claim-panel li {
+    font-size: 14.5px;
+    color: var(--text-dim);
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+    line-height: 1.5;
+  }
+  .claim-panel li:first-of-type { border-top: none; }
+  .claim-panel li strong { color: var(--text); font-weight: 500; }
+
+  /* ---------- ARCHITECTURE ---------- */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    overflow: hidden;
+  }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    gap: 20px;
+    align-items: center;
+    padding: 22px 26px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    position: relative;
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-step:nth-child(even) { background: var(--panel-alt); }
+  .flow-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--signal);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .flow-num::before { content: ''; width: 1px; height: 22px; background: var(--line); }
+  .flow-step:first-child .flow-num::before { display: none; }
+  .flow-body h4 { font-size: 15.5px; font-weight: 600; margin-bottom: 5px; }
+  .flow-body p { font-size: 14px; color: var(--text-dim); line-height: 1.55; max-width: 480px; }
+  .flow-file {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--data);
+    background: rgba(79,163,209,0.08);
+    border: 1px solid var(--data-dim);
+    padding: 5px 10px;
+    border-radius: var(--radius-s);
+    white-space: nowrap;
+  }
+
+  /* ---------- DATA SOURCES ---------- */
+  .source-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .source-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    padding: 28px;
+  }
+  .source-card .src-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .source-card h3 { font-size: 17px; font-weight: 600; }
+  .src-tag {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--good);
+    border: 1px solid rgba(111,191,139,0.35);
+    padding: 3px 8px;
+    border-radius: var(--radius-s);
+  }
+  .source-card .src-note { font-size: 13.5px; color: var(--text-dim); margin-bottom: 18px; }
+  .endpoint {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    background: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-s);
+    padding: 14px 16px;
+    color: var(--data);
+    overflow-x: auto;
+    margin-bottom: 18px;
+    line-height: 1.6;
+  }
+  .field-list { list-style: none; }
+  .field-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+  }
+  .field-list li:first-child { border-top: none; }
+  .field-list .fname { font-family: var(--font-mono); color: var(--text); }
+  .field-list .fdesc { color: var(--text-dim); text-align: right; }
+
+  /* ---------- METHODOLOGY ---------- */
+  .formula-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .formula-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+  }
+  .formula-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+  .formula-box {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    background: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-s);
+    padding: 16px;
+    color: var(--signal);
+    margin-bottom: 16px;
+    line-height: 1.7;
+  }
+  .formula-card p { font-size: 13.5px; color: var(--text-dim); line-height: 1.6; }
+
+  /* ---------- ANOMALY CHART ---------- */
+  .chart-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    padding: 28px;
+  }
+  .chart-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .chart-head h3 { font-size: 16px; font-weight: 600; }
+  .sample-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    border: 1px solid var(--line);
+    padding: 4px 9px;
+    border-radius: var(--radius-s);
+  }
+  .chart-canvas-wrap { position: relative; height: 320px; }
+  .why-box {
+    margin-top: 24px;
+    padding: 18px 20px;
+    background: var(--panel-alt);
+    border-left: 2px solid var(--signal);
+    border-radius: 0 var(--radius-s) var(--radius-s) 0;
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.65;
+  }
+  .why-box strong { color: var(--text); }
+
+  /* ---------- SAMPLE OUTPUT TABLE ---------- */
+  .table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    overflow-x: auto;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    min-width: 720px;
+  }
+  table.data-table th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 500;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  table.data-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  table.data-table tr:last-child td { border-bottom: none; }
+  .flag-true { color: var(--signal); font-weight: 600; }
+  .flag-false { color: var(--text-dim); }
+
+  /* ---------- SETUP ---------- */
+  .setup-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 24px;
+  }
+  .code-block {
+    background: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    overflow: hidden;
+  }
+  .code-block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .code-block pre {
+    padding: 18px 20px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--good);
+    overflow-x: auto;
+    line-height: 1.8;
+  }
+  .code-block pre .c-comment { color: var(--text-dim); }
+  .file-tree {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    padding: 20px 22px;
+    line-height: 1.9;
+    color: var(--text-dim);
+  }
+  .file-tree .dir { color: var(--data); }
+  .file-tree .file { color: var(--text); }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    padding: 48px 0 calc(48px + env(safe-area-inset-bottom, 0px));
+  }
+  .foot-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .foot-left { font-size: 13.5px; color: var(--text-dim); }
+  .stack-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stack-chip {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-dim);
+    border: 1px solid var(--line);
+    padding: 5px 10px;
+    border-radius: var(--radius-s);
+  }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 900px) {
+    .split-cols, .source-grid, .formula-grid, .setup-grid { grid-template-columns: 1fr; }
+    .flow-step { grid-template-columns: 40px 1fr; }
+    .flow-file { grid-column: 2; justify-self: flex-start; margin-top: 8px; }
+  }
+  @media (max-width: 720px) {
+    nav.links { display: none; }
+    .nav-toggle { display: flex; align-items: center; justify-content: center; }
+    section { padding: 64px 0; }
+    .hero { min-height: auto; padding-bottom: 60px; }
+    .hero-stats { gap: 22px; }
+  }
+  nav.links.mobile-open {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 64px; left: 0; right: 0;
+    background: var(--ink);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 20px 20px;
+    z-index: 99;
+  }
+  nav.links.mobile-open a { padding: 12px 6px; font-size: 15px; }
+
+  /* Keyboard focus visibility */
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand"><span class="brand-dot"></span>CryptoPulse</a>
+    <nav class="links" id="navLinks">
+      <a href="#overview">Overview</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#data-sources">Data sources</a>
+      <a href="#methodology">Methodology</a>
+      <a href="#anomalies">Anomaly detection</a>
+      <a href="#sample">Sample output</a>
+      <a href="#setup">Setup</a>
+    </nav>
+    <a class="nav-cta" href="https://github.com/AaricaMatrix/cryptopulse" target="_blank" rel="noopener">
+      GitHub ↗
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ================= HERO ================= -->
+  <section class="hero" id="hero-section">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-fade"></div>
+    <div class="hero-content">
+      <div class="hero-inner">
+        <div class="hero-kicker">pipeline status — 5 coins, 90-day window</div>
+        <h1 class="hero-title">Five coins. One sentiment index. Every anomaly explained.</h1>
+        <p class="hero-sub">CryptoPulse pulls real price, volume, and market-wide sentiment data for BTC, ETH, SOL, ADA, and POL, then flags the days that don't look like the others — and shows its work for every number it produces.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#architecture">View the pipeline</a>
+          <a class="btn btn-ghost" href="https://github.com/AaricaMatrix/cryptopulse" target="_blank" rel="noopener">Open on GitHub</a>
+        </div>
+        <div class="hero-stats">
+          <div><div class="hstat-num">90</div><div class="hstat-label">days of history</div></div>
+          <div><div class="hstat-num">2</div><div class="hstat-label">free, keyless APIs</div></div>
+          <div><div class="hstat-num">z &gt; 2</div><div class="hstat-label">anomaly threshold</div></div>
+          <div><div class="hstat-num">0</div><div class="hstat-label">trading signals sold</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= OVERVIEW ================= -->
+  <section id="overview">
+    <div class="wrap">
+      <div class="sec-label">Overview</div>
+      <h2 class="sec-title">A self-initiated project, scoped and labeled honestly.</h2>
+      <p class="sec-desc">Built to have real, defensible Web3-domain evidence before applying somewhere that lives and breathes crypto — not to claim a trading system that doesn't exist. Every design choice below has a reason, and every reason is one you can say out loud in an interview.</p>
+      <div class="split-cols">
+        <div class="claim-panel is">
+          <h3>What this is</h3>
+          <ul>
+            <li><strong>A real pipeline</strong> — live HTTP calls to CoinGecko and the Fear &amp; Greed Index, not a static sample dataset.</li>
+            <li><strong>An honest heuristic</strong> — z-score anomaly detection, chosen deliberately for a 90-point dataset, not dressed up as a trained model.</li>
+            <li><strong>Tableau-ready</strong> — three clean CSVs that open with no manual type-fixing.</li>
+            <li><strong>Fully explainable</strong> — every column, every threshold, every join has a documented reason.</li>
+          </ul>
+        </div>
+        <div class="claim-panel isnt">
+          <h3>What this isn't</h3>
+          <ul>
+            <li><strong>Not a trading system</strong> — no buy/sell logic, no backtesting, no signals for sale.</li>
+            <li><strong>Not per-coin sentiment</strong> — the Fear &amp; Greed Index is market-wide; the pipeline never pretends otherwise.</li>
+            <li><strong>Not production-grade ML</strong> — a rolling z-score, not an Isolation Forest, because the dataset doesn't justify one here.</li>
+            <li><strong>Not real-time</strong> — one batch pull is enough for exploratory analysis; this isn't a live dashboard.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ARCHITECTURE ================= -->
+  <section id="architecture">
+    <div class="wrap">
+      <div class="sec-label">Architecture</div>
+      <h2 class="sec-title">Six steps, each in its own file.</h2>
+      <p class="sec-desc">One command runs the whole thing. Nothing here is one giant script — each stage is isolated enough to test, read, and swap out on its own.</p>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">01</div>
+          <div class="flow-body"><h4>Validate coin IDs</h4><p>Checks every configured coin against CoinGecko's live ID list before spending a single API call fetching data for one that no longer exists.</p></div>
+          <div class="flow-file">fetch_data.py</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">02</div>
+          <div class="flow-body"><h4>Fetch market data</h4><p>Pulls 90 days of daily price, volume, and market cap per coin from CoinGecko, with retry-and-backoff on rate limits and graceful skip on hard failures.</p></div>
+          <div class="flow-file">fetch_data.py</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">03</div>
+          <div class="flow-body"><h4>Fetch sentiment</h4><p>Pulls the matching 90-day Fear &amp; Greed Index history — one market-wide reading per day, kept structurally distinct from per-coin data.</p></div>
+          <div class="flow-file">fetch_data.py</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">04</div>
+          <div class="flow-body"><h4>Compute features</h4><p>Daily returns, then 7-day and 30-day rolling volatility — pure functions with no network calls, so they're testable against synthetic data offline.</p></div>
+          <div class="flow-file">features.py</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">05</div>
+          <div class="flow-body"><h4>Flag anomalies</h4><p>Volume z-score against a trailing 30-day baseline, isolated in its own module so the method can be swapped later without touching the rest of the pipeline.</p></div>
+          <div class="flow-file">anomaly_detection.py</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">06</div>
+          <div class="flow-body"><h4>Merge &amp; export</h4><p>Left-joins sentiment onto price data by date, writes three typed CSVs, and renders three sanity-check charts before anything touches Tableau.</p></div>
+          <div class="flow-file">pipeline.py</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DATA SOURCES ================= -->
+  <section id="data-sources">
+    <div class="wrap">
+      <div class="sec-label">Data sources</div>
+      <h2 class="sec-title">Two free, keyless APIs. Nothing to leak, nothing to configure.</h2>
+      <p class="sec-desc">No API keys anywhere in this project — both sources below are public and require none, which means there's also nothing sensitive to accidentally commit.</p>
+      <div class="source-grid">
+        <div class="source-card">
+          <div class="src-head"><h3>CoinGecko</h3><span class="src-tag">keyless</span></div>
+          <div class="src-note">Per-coin daily price, volume, and market cap history.</div>
+          <div class="endpoint">GET /coins/{id}/market_chart<br>&nbsp;&nbsp;?vs_currency=usd&amp;days=90&amp;interval=daily</div>
+          <ul class="field-list">
+            <li><span class="fname">prices</span><span class="fdesc">[timestamp_ms, price] pairs</span></li>
+            <li><span class="fname">total_volumes</span><span class="fdesc">[timestamp_ms, volume] pairs</span></li>
+            <li><span class="fname">market_caps</span><span class="fdesc">[timestamp_ms, cap] pairs</span></li>
+            <li><span class="fname">coin id</span><span class="fdesc">a slug, not a ticker — "bitcoin", not "BTC"</span></li>
+          </ul>
+        </div>
+        <div class="source-card">
+          <div class="src-head"><h3>Fear &amp; Greed Index</h3><span class="src-tag">keyless</span></div>
+          <div class="src-note">Market-wide sentiment via Alternative.me — one reading per day, not per coin.</div>
+          <div class="endpoint">GET api.alternative.me/fng/<br>&nbsp;&nbsp;?limit=90&amp;format=json</div>
+          <ul class="field-list">
+            <li><span class="fname">value</span><span class="fdesc">0–100 sentiment score</span></li>
+            <li><span class="fname">value_classification</span><span class="fdesc">e.g. "Extreme Fear"</span></li>
+            <li><span class="fname">timestamp</span><span class="fdesc">unix seconds — not ms, unlike CoinGecko</span></li>
+            <li><span class="fname">scope</span><span class="fdesc">whole market, joined onto every coin by date</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= METHODOLOGY ================= -->
+  <section id="methodology">
+    <div class="wrap">
+      <div class="sec-label">Methodology</div>
+      <h2 class="sec-title">Three numbers, each one defensible out loud.</h2>
+      <p class="sec-desc">Nothing computed here needs hand-waving. If asked to explain any column in the exported CSVs, the answer is below.</p>
+      <div class="formula-grid">
+        <div class="formula-card">
+          <h4>Daily return</h4>
+          <div class="formula-box">rt&nbsp;=&nbsp;(Pt&nbsp;−&nbsp;Pt-1)&nbsp;/&nbsp;Pt-1</div>
+          <p>Simple percent change, not log return — easier to explain in an interview, and the difference doesn't matter at this scale. Calculated per coin, so one coin's history never bleeds into another's.</p>
+        </div>
+        <div class="formula-card">
+          <h4>Rolling volatility</h4>
+          <div class="formula-box">σ7d&nbsp;=&nbsp;stdev(rt&nbsp;…&nbsp;rt-6)<br>σ30d&nbsp;=&nbsp;stdev(rt&nbsp;…&nbsp;rt-29)</div>
+          <p>Standard realized volatility: how hard the price is swinging, regardless of direction. A rising 30-day figure means the recent past has been rougher than the month before it.</p>
+        </div>
+        <div class="formula-card">
+          <h4>Volume z-score</h4>
+          <div class="formula-box">z&nbsp;=&nbsp;(Vt&nbsp;−&nbsp;μ30d)&nbsp;/&nbsp;σ30d<br>flag&nbsp;if&nbsp;|z|&nbsp;&gt;&nbsp;2</div>
+          <p>How many standard deviations today's volume sits from its own trailing 30-day normal. A simple, well-known outlier heuristic — not a trained model.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ANOMALY DETECTION ================= -->
+  <section id="anomalies">
+    <div class="wrap">
+      <div class="sec-label">Anomaly detection</div>
+      <h2 class="sec-title">Why z-score, and not Isolation Forest?</h2>
+      <p class="sec-desc">A fair question if it comes up — especially since Isolation Forest was the right call on a larger dataset elsewhere.</p>
+      <div class="chart-panel">
+        <div class="chart-head">
+          <h3>Volume anomalies against price — illustrative</h3>
+          <span class="sample-badge">synthetic sample, not live data</span>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="anomalyChart"></canvas></div>
+        <div class="why-box">
+          <strong>Dataset size decided this, not preference.</strong> Isolation Forest earns its complexity on larger datasets where it can actually learn the shape of "normal." With 90 daily points per coin, a rolling z-score against a 30-day baseline is simpler, transparent, and just as effective — and it's the version of this reasoning that holds up when someone asks "why didn't you use the fancier method?"
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SAMPLE OUTPUT ================= -->
+  <section id="sample">
+    <div class="wrap">
+      <div class="sec-label">Sample output</div>
+      <h2 class="sec-title">What lands in <span class="mono">merged_daily.csv</span></h2>
+      <p class="sec-desc">The one file to point Tableau at. Rows below are illustrative — structure only, generated from synthetic test data, not a live pull.</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>date</th><th>coin</th><th>price</th><th>volume</th>
+              <th>daily_return</th><th>vol_30d</th><th>volume_zscore</th>
+              <th>anomaly</th><th>fear_greed_value</th>
+            </tr>
+          </thead>
+          <tbody id="sampleTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SETUP ================= -->
+  <section id="setup">
+    <div class="wrap">
+      <div class="sec-label">Setup</div>
+      <h2 class="sec-title">One command, no API keys.</h2>
+      <p class="sec-desc">Clone it, install, run it. Outputs land in <span class="mono">data/</span> and <span class="mono">charts/</span> — point Tableau at <span class="mono">merged_daily.csv</span> when it's done.</p>
+      <div class="setup-grid">
+        <div class="code-block">
+          <div class="code-block-head"><span>terminal</span><span>bash</span></div>
+          <pre><span class="c-comment"># clone and enter the project</span>
+git clone https://github.com/AaricaMatrix/cryptopulse.git
+cd cryptopulse
+
+<span class="c-comment"># install dependencies</span>
+pip install -r requirements.txt
+
+<span class="c-comment"># run the full pipeline</span>
+python -m src.pipeline
+
+<span class="c-comment"># check what landed</span>
+head data/merged_daily.csv</pre>
+        </div>
+        <div class="file-tree">
+<div><span class="dir">cryptopulse/</span></div>
+<div>&nbsp;&nbsp;├── PRD.md</div>
+<div>&nbsp;&nbsp;├── SKILL.md</div>
+<div>&nbsp;&nbsp;├── documentation.md</div>
+<div>&nbsp;&nbsp;├── <span class="dir">src/</span></div>
+<div>&nbsp;&nbsp;│&nbsp;&nbsp;├── config.py</div>
+<div>&nbsp;&nbsp;│&nbsp;&nbsp;├── fetch_data.py</div>
+<div>&nbsp;&nbsp;│&nbsp;&nbsp;├── features.py</div>
+<div>&nbsp;&nbsp;│&nbsp;&nbsp;├── anomaly_detection.py</div>
+<div>&nbsp;&nbsp;│&nbsp;&nbsp;└── pipeline.py</div>
+<div>&nbsp;&nbsp;├── <span class="dir">data/</span> <span style="color:var(--text-dim)">→ CSVs land here</span></div>
+<div>&nbsp;&nbsp;└── <span class="dir">charts/</span> <span style="color:var(--text-dim)">→ PNGs land here</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-inner">
+      <div class="foot-left">CryptoPulse — built to close a gap honestly, not to impress with jargon.</div>
+      <div class="stack-row">
+        <span class="stack-chip">Python</span>
+        <span class="stack-chip">pandas</span>
+        <span class="stack-chip">numpy</span>
+        <span class="stack-chip">matplotlib</span>
+        <span class="stack-chip">CoinGecko API</span>
+        <span class="stack-chip">Fear &amp; Greed API</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ============ MOBILE NAV TOGGLE ============ */
+  var navToggle = document.getElementById('navToggle');
+  var navLinks = document.getElementById('navLinks');
+  navToggle.addEventListener('click', function () {
+    navLinks.classList.toggle('mobile-open');
+  });
+  navLinks.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', function () { navLinks.classList.remove('mobile-open'); });
+  });
+
+  /* ============ ACTIVE NAV HIGHLIGHT ============ */
+  var sections = ['overview','architecture','data-sources','methodology','anomalies','sample','setup']
+    .map(function (id) { return document.getElementById(id); })
+    .filter(Boolean);
+  var navAnchors = Array.prototype.slice.call(navLinks.querySelectorAll('a'));
+
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          navAnchors.forEach(function (a) {
+            a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id);
+          });
+        }
+      });
+    }, { rootMargin: '-40% 0px -55% 0px', threshold: 0 });
+    sections.forEach(function (s) { observer.observe(s); });
+  }
+
+  /* ============ SAMPLE TABLE (synthetic, clearly labeled) ============ */
+  var sampleRows = [
+    ['2026-08-14','bitcoin','61,204.11','912,004,221','+1.8%','0.0214','-0.41','—','54'],
+    ['2026-08-15','bitcoin','63,988.72','4,881,902,004','+4.5%','0.0261','5.24','ANOMALY','61'],
+    ['2026-08-16','bitcoin','62,710.05','1,033,558,120','-2.0%','0.0248','-0.29','—','58'],
+    ['2026-08-14','solana','142.30','620,441,880','-0.9%','0.0389','0.62','—','54'],
+    ['2026-08-15','solana','138.95','689,220,110','-2.4%','0.0402','1.10','—','61'],
+  ];
+  var tbody = document.getElementById('sampleTableBody');
+  sampleRows.forEach(function (row) {
+    var tr = document.createElement('tr');
+    row.forEach(function (cell, i) {
+      var td = document.createElement('td');
+      if (i === 7) {
+        td.className = cell === 'ANOMALY' ? 'flag-true' : 'flag-false';
+        td.textContent = cell === 'ANOMALY' ? 'true' : 'false';
+      } else {
+        td.textContent = cell;
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  /* ============ ANOMALY CHART (Chart.js, synthetic sample) ============ */
+  var days = 60;
+  var labels = [];
+  var priceData = [];
+  var anomalyPoints = [];
+  var seed = 42;
+  function rand() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  var price = 60000;
+  for (var i = 0; i < days; i++) {
+    price += (rand() - 0.5) * 1800;
+    labels.push('D' + (i + 1));
+    priceData.push(Math.round(price));
+    if (i === 22 || i === 41) {
+      anomalyPoints.push({ x: 'D' + (i + 1), y: Math.round(price) });
+    }
+  }
+  var ctx = document.getElementById('anomalyChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Price',
+          data: priceData,
+          borderColor: '#4FA3D1',
+          backgroundColor: 'rgba(79,163,209,0.08)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.25,
+          fill: true,
+        },
+        {
+          label: 'Flagged volume day',
+          data: anomalyPoints,
+          type: 'scatter',
+          backgroundColor: '#E8A33D',
+          borderColor: '#E8A33D',
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          showLine: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#8FA0AC', font: { family: 'IBM Plex Mono', size: 11 }, boxWidth: 10 } },
+        tooltip: {
+          backgroundColor: '#121820',
+          titleColor: '#E7ECEF',
+          bodyColor: '#8FA0AC',
+          borderColor: '#223040',
+          borderWidth: 1,
+        }
+      },
+      scales: {
+        x: { grid: { color: '#1a222c' }, ticks: { color: '#8FA0AC', font: { family: 'IBM Plex Mono', size: 10 }, maxTicksLimit: 10 } },
+        y: { grid: { color: '#1a222c' }, ticks: { color: '#8FA0AC', font: { family: 'IBM Plex Mono', size: 10 } } }
+      }
+    }
+  });
+
+  /* ============ WEBGL HERO — data field with rare anomaly pulses ============ */
+  var canvas = document.getElementById('hero-canvas');
+  var heroSection = document.getElementById('hero-section');
+
+  if (window.THREE && canvas) {
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+    camera.position.set(0, 0, 11);
+
+    var COUNT = 900;
+    var positions = new Float32Array(COUNT * 3);
+    var anomalyAttr = new Float32Array(COUNT);
+    var seedAttr = new Float32Array(COUNT);
+
+    for (var p = 0; p < COUNT; p++) {
+      // distribute inside a flattened ellipsoid, biased to the right/back so text stays legible
+      var r = 5.5 * Math.cbrt(Math.random());
+      var theta = Math.random() * Math.PI * 2;
+      var phi = Math.acos((Math.random() * 2) - 1);
+      var x = r * Math.sin(phi) * Math.cos(theta) * 1.15 + 2.4;
+      var y = r * Math.sin(phi) * Math.sin(theta) * 0.9;
+      var z = r * Math.cos(phi) * 0.9 - 2;
+      positions[p * 3] = x;
+      positions[p * 3 + 1] = y;
+      positions[p * 3 + 2] = z;
+      anomalyAttr[p] = Math.random() < 0.025 ? 1.0 : 0.0; // ~2.5% flagged as "anomalous"
+      seedAttr[p] = Math.random() * 10;
+    }
+
+    var geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('aAnomaly', new THREE.BufferAttribute(anomalyAttr, 1));
+    geometry.setAttribute('aSeed', new THREE.BufferAttribute(seedAttr, 1));
+
+    var material = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: [
+        'attribute float aAnomaly;',
+        'attribute float aSeed;',
+        'uniform float uTime;',
+        'varying float vAnomaly;',
+        'void main() {',
+        '  vAnomaly = aAnomaly;',
+        '  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);',
+        '  float pulse = aAnomaly > 0.5 ? (0.55 + 0.45 * sin(uTime * 1.8 + aSeed * 6.28)) : 1.0;',
+        '  float baseSize = aAnomaly > 0.5 ? 5.2 : 2.0;',
+        '  gl_PointSize = baseSize * pulse * (260.0 / -mvPosition.z);',
+        '  gl_Position = projectionMatrix * mvPosition;',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'varying float vAnomaly;',
+        'void main() {',
+        '  vec2 c = gl_PointCoord - vec2(0.5);',
+        '  float d = length(c);',
+        '  if (d > 0.5) discard;',
+        '  float alpha = smoothstep(0.5, 0.0, d);',
+        '  vec3 normalColor = vec3(0.31, 0.64, 0.82);',
+        '  vec3 anomalyColor = vec3(0.91, 0.64, 0.24);',
+        '  vec3 color = mix(normalColor, anomalyColor, vAnomaly);',
+        '  float a = alpha * (vAnomaly > 0.5 ? 0.95 : 0.42);',
+        '  gl_FragColor = vec4(color, a);',
+        '}'
+      ].join('\n'),
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+
+    var points = new THREE.Points(geometry, material);
+    scene.add(points);
+
+    function resize() {
+      var w = heroSection.clientWidth;
+      var h = heroSection.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    var mouseX = 0, mouseY = 0;
+    window.addEventListener('mousemove', function (e) {
+      mouseX = (e.clientX / window.innerWidth - 0.5);
+      mouseY = (e.clientY / window.innerHeight - 0.5);
+    });
+
+    var clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      var t = clock.getElapsedTime();
+      material.uniforms.uTime.value = t;
+      if (!prefersReducedMotion) {
+        points.rotation.y = t * 0.035;
+        camera.position.x += (mouseX * 1.4 - camera.position.x) * 0.02;
+        camera.position.y += (-mouseY * 0.8 - camera.position.y) * 0.02;
+        camera.lookAt(2.4, 0, -2);
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+  }
+})();
+</script>
+</body>
+</html>
